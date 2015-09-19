@@ -3,12 +3,14 @@ from bs4 import BeautifulSoup
 import sys
 import os
 import pandas
+import re
 
 targetURL = "http://www.ubcpress.ca/search/subject_list.asp?SubjID=45"
 
 bookLinks = "http://www.ubcpress.ca/search/"
 
 outputDir = "UBC_Output"
+
 
 def main():
     r = requests.get(targetURL)
@@ -25,7 +27,6 @@ def main():
     booksDict = {
         "title" : [],
         "authors" : [],
-        "blurb" : [],
         "summary" : [],
         "subjects" : [],
         "authorBio" : [],
@@ -33,44 +34,44 @@ def main():
         "ISBN" : [],
     }
     print("Found {} urls".format(len(book_urls)))
-    for url in book_urls[:2]:
-        print("Getting: {}".format(url))
-        with open("{}.html".format(url.replace('/','')), 'wb') as f:
-            for chunk in r.iter_content(1024):
-                f.write(chunk)
+    for i, url in enumerate(book_urls):
+        print("On url index {}".format(i))
         r = requests.get(url)
         soup = BeautifulSoup(r.content, "html.parser")
-        title = soup.find("h4").text
+        print("Getting: {}".format(url))
+        title = soup.find("span", {"class" : "booktitle"}).text
         print("Found: '{}'".format(title))
         print("Writing '{}/{}.html'".format(outputDir, title))
         with open("{}.html".format(title.replace('/','')), 'wb') as f:
             for chunk in r.iter_content(1024):
                 f.write(chunk)
         booksDict['title'].append(title)
-        booksDict['authors'].append([a.text for a in soup.find("div", {"class" : "author"}).find_all("a", {"class": "greenOver"})])
+        booksDict['authors'].append([a.text.strip() for a in soup.find_all("a", {"href" : "#author"})])
+        mainBodyText = soup.find("td", {"width" : "545", "colspan":"3"}).find("span" , {"class" : "regtext"})
+        regex = re.match(r"""(.*)About the Author\(s\)(.*)Table of Contents""", mainBodyText.text, flags = re.DOTALL)
+        if regex is None:
+            regex = re.match(r"""(.*)About the Author\(s\)(.*)""", mainBodyText.text, flags = re.DOTALL)
+        booksDict['summary'].append(regex.group(1).strip())
+        booksDict["authorBio"].append(regex.group(2).strip().split('\n '))
+        booksDict["authorBio"][-1] = [s.strip() for s in booksDict["authorBio"][-1]]
+        subjectsLst = []
+        for sub in mainBodyText.find_all("a"):
+            try:
+                if "subject_list.asp?SubjID=" in sub.get("href"):
+                    subjectsLst.append(sub.text)
+            except TypeError:
+                pass
+        booksDict["subjects"].append(subjectsLst)
+        newstext = soup.find("span", {"class" : "newstext"}).text
+        regex = re.search(r"Release Date: (.*)(ISBN: \d*)", newstext)
         try:
-            booksDict["authorBio"].append(soup.find('div', {"id" : "tabs-2"}).text.lstrip()[:-1])
+            booksDict['date'].append(regex.group(1))
+            booksDict['ISBN'].append(regex.group(2))
         except AttributeError:
-            booksDict["authorBio"].append(None)
-        overViewRaw = soup.find("div", {"class" : "tabDataHolder", "id" : "tabs--1"})
-        try:
-            booksDict['blurb'].append(overViewRaw.h3.text)
-        except AttributeError:
-            booksDict['blurb'].append(None)
-        booksDict['summary'].append(overViewRaw.div.text)
-        booksDict['subjects'].append([sub.text for sub in soup.find_all("div", {"class" : "iconGrid"})])
-        print("Subjects are : {}".format(', '.join(booksDict['subjects'][-1])))
-        details = soup.find("div", {"class": "overviewDetails overviewDetailsRight"})
-        foundISBN = False
-        for val in details.find_all('p'):
-            if foundISBN:
-                booksDict['date'].append(val.text)
-                break
-            elif val.text[:5] == "ISBN ":
-                booksDict['ISBN'].append(val.text)
-                foundISBN = True
+            booksDict['date'].append(None)
+            booksDict['ISBN'].append(None)
     os.chdir('..')
-    pandas.DataFrame(booksDict).to_csv("MQUPscrape.csv")
+    pandas.DataFrame(booksDict).to_csv("UBCscrape.csv")
 
 if __name__ == "__main__":
     main()

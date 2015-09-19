@@ -12,7 +12,7 @@ values = {
     "options" : """a:12:{s:9:"queryFunc";s:25:"getProductsForListingPage";s:11:"enableCache";b:0;s:5:"limit";i:200;s:6:"offset";i:0;s:10:"searchTerm";s:0:"";s:6:"pageID";s:2:"46";s:14:"contributor_id";s:0:"";s:10:"pageOffset";i:0;s:13:"resultsPerRow";i:4;s:14:"resultsPerPage";i:200;s:9:"className";s:0:"";s:8:"currency";s:3:"CAD";}""",
 }
 
-outputDir = "mqup_Output"
+outputDir = "MQUP_Output"
 
 def main():
     r = requests.post(targetURL, data = values)
