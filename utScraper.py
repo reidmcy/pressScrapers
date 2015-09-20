@@ -81,7 +81,7 @@ def main():
         booksDict['authorBio'].append(authsBio)
         booksDict['subjects'].append(soup.find_all("a", {"class" : "bread-crumb"})[2].text)
     os.chdir('..')
-    pandas.DataFrame(booksDict).to_csv("UBCscrape.csv")
+    pandas.DataFrame(booksDict).to_csv("UTscrape.csv")
 
 if __name__ == "__main__":
     main()
