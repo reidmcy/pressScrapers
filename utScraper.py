@@ -12,6 +12,7 @@ productURL = "http://www.utppublishing.com/"
 outputDir = "UT_Output"
 
 
+
 def main():
 
     book_urls = []
@@ -31,6 +32,9 @@ def main():
                     book_urls.append(productURL + link.get("href"))
         else:
             stillAgoodPage = False
+            print("Done")
+        #if pageNum % 1 == 0:
+        #    stillAgoodPage = False
     if not os.path.isdir(outputDir):
         os.mkdir(outputDir)
     os.chdir(outputDir)
@@ -63,9 +67,16 @@ def main():
         booksDict['summary'].append(soup.find("div", {"class" : "ptab-cont tab-descr"}).text)
         authsLst = []
         authsBio = []
+
         for bio in soup.find_all("div", {"class": "ptab-cont extra_18"}):
-            authsBio.append(bio.text)
-            authsLst.append(bio.find("strong").text)
+            authsBio.append(bio.text.strip())
+            try:
+                authsLst.append(bio.find("strong").text)
+            except AttributeError:
+                try:
+                    authsLst.append(bio.find("b").text)
+                except AttributeError:
+                    authsLst.append(soup.find("td", {"colspan" : "2", "class" :"property-value"}).text.replace("By ", '').replace("Edited by ", "").replace(" and ", ", ").split(', '))
         booksDict['authors'].append(authsLst)
         booksDict['authorBio'].append(authsBio)
         booksDict['subjects'].append(soup.find_all("a", {"class" : "bread-crumb"})[2].text)
